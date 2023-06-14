@@ -3,25 +3,31 @@
   "version": "1.0.0",
   "description": "Rusty Object Notation for Javascript",
   "main": "dist/index.js",
-  "dependencies": {},
-  "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "build": "node scripts/build.mjs"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/whiteand/ron-js.git"
   },
   "keywords": [
+    "ron",
     "rusty",
+    "rust",
     "object",
-    "notation",
-    "ron"
+    "notation"
   ],
   "author": "whiteand",
-  "license": "MIT",
+  "license": "ISC",
   "bugs": {
     "url": "https://github.com/whiteand/ron-js/issues"
   },
-  "homepage": "https://github.com/whiteand/ron-js#readme"
+  "homepage": "https://github.com/whiteand/ron-js#readme",
+  "devDependencies": {
+    "esbuild": "^0.18.2",
+    "typescript": "^5.1.3",
+    "vitest": "^0.32.0"
+  }
 }
