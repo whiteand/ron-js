@@ -20,6 +20,7 @@ describe("ron parser", () => {
       ["3.14", true, 3.14, ""],
       ["3.14e2", true, 314, ""],
       ["3e2", true, 300, ""],
+      ["e2", false, null, "e2"],
     ] as const;
     for (const [input, isOk, value, rest] of inputs) {
       const stringInput = new StringInput(input);
