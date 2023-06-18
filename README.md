@@ -1,4 +1,4 @@
-# ron-js
+# rusty-object-notation
 
 This is a library for Rusty Object Notation (RON) in Javascript.
 

@@ -1,6 +1,6 @@
 {
-  "name": "ron-js",
-  "version": "1.0.0",
+  "name": "rusty-object-notation",
+  "version": "0.0.1",
   "description": "Rusty Object Notation for Javascript",
   "main": "dist/index.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/whiteand/ron-js.git"
+    "url": "git+https://github.com/whiteand/rusty-object-notation.git"
   },
   "keywords": [
     "ron",
@@ -22,9 +22,9 @@
   "author": "whiteand",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/whiteand/ron-js/issues"
+    "url": "https://github.com/whiteand/rusty-object-notation/issues"
   },
-  "homepage": "https://github.com/whiteand/ron-js#readme",
+  "homepage": "https://github.com/whiteand/rusty-object-notation#readme",
   "devDependencies": {
     "esbuild": "^0.18.2",
     "typescript": "^5.1.3",
