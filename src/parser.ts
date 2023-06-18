@@ -64,7 +64,6 @@ function positiveFloatParser(input: IInput): ParserResult<number> {
   if (Number.isNaN(parsed)) return FALSE_RESULT;
   return ok(parsed);
 }
-const HEX_DIGITS = "0123456789abcdefABCDEF";
 function hexInteger(input: IInput): ParserResult<number> {
   let hexDigits = "";
   while (!input.eof()) {
@@ -121,51 +120,157 @@ function decimalPositiveInteger(input: IInput): ParserResult<number> {
 
   return ok(result);
 }
+const HEX_DIGITS = "0123456789abcdefABCDEF";
 export function positiveNumber(input: IInput): ParserResult<number> {
   input.skipWhitespace();
-  let numberStart = input.checkpoint();
-  let ch = input.character();
-  if (ch === ".") {
-    return positiveFloatParser(input);
-  }
-  if (ch === "0") {
-    while (ch === "0" && !input.eof()) {
-      input.skip(1);
-      ch = input.character();
-    }
-    if (ch === "x" || ch === "X") {
-      input.skip(1);
-      return hexInteger(input);
-    }
+  const GET_DOT = 1;
+  const GET_EXP = 2;
+  const GET_EXP_SIGN = 4;
+  const GET_EXP_DIGIT = 8;
+  const GET_BINARY_SIGN = 16;
+  const GET_HEX_SIGN = 32;
+
+  let state = 0;
+  let collected = "";
+  while (!input.eof()) {
+    let ch = input.character();
     if (ch === ".") {
-      return positiveFloatParser(input);
+      if ((state & GET_DOT) > 0) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      state |= GET_DOT;
+      input.skip(1);
+      continue;
+    }
+    if (ch === "e" || ch === "E") {
+      if ((state & GET_BINARY_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_HEX_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_EXP) > 0) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      state |= GET_EXP;
+      input.skip(1);
+      continue;
+    }
+    if (ch === "+" || ch === "-") {
+      if ((state & GET_BINARY_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_HEX_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_EXP) === 0) {
+        break;
+      }
+      if ((state & GET_EXP_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      state |= GET_EXP_SIGN;
+      input.skip(1);
+      continue;
     }
     if (ch === "b" || ch === "B") {
+      if ((state & GET_BINARY_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_HEX_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      collected = "";
+      state |= GET_BINARY_SIGN;
       input.skip(1);
-      return binaryInteger(input);
+      continue;
     }
-    let checkpoint = input.checkpoint();
-    let decimalIntegerResult = decimalPositiveInteger(input);
-    if (!decimalIntegerResult.ok) {
-      input.rewind(checkpoint);
-      return ok(0);
+    if (ch === "x" || ch === "X") {
+      if ((state & GET_BINARY_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_HEX_SIGN) > 0) {
+        return FALSE_RESULT;
+      }
+      if ((state & GET_EXP) > 0) {
+        return FALSE_RESULT;
+      }
+      collected = "";
+      state |= GET_HEX_SIGN;
+      input.skip(1);
+      continue;
     }
-    return decimalIntegerResult;
+    let d = HEX_DIGITS.indexOf(ch);
+    if (d < 0) {
+      break;
+    }
+    if ((state & GET_BINARY_SIGN) > 0) {
+      if (d > 1) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      input.skip(1);
+      continue;
+    }
+    if ((state & GET_HEX_SIGN) > 0) {
+      collected += ch;
+      input.skip(1);
+      continue;
+    }
+    if ((state & GET_EXP) > 0) {
+      if (d > 9) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      state |= GET_EXP_DIGIT;
+      input.skip(1);
+      continue;
+    }
+    if ((state & GET_DOT) > 0) {
+      if (d > 9) {
+        return FALSE_RESULT;
+      }
+      collected += ch;
+      input.skip(1);
+      continue;
+    }
+    if (d > 9) {
+      return FALSE_RESULT;
+    }
+    collected += ch;
+    input.skip(1);
   }
-  let integerPart = decimalPositiveInteger(input);
-  if (!integerPart.ok) {
-    return FALSE_RESULT;
+  // input.fail(`collected: ${JSON.stringify(collected)}`);
+  if ((state & GET_BINARY_SIGN) > 0) {
+    const result = Number.parseInt(collected, 2);
+    if (Number.isNaN(result)) {
+      input.fail(`Failed to parse binary number: ${collected}`);
+    }
+    return ok(result);
   }
-  if (input.eof()) {
-    return integerPart;
+  if ((state & GET_HEX_SIGN) > 0) {
+    const result = Number.parseInt(collected, 16);
+    if (Number.isNaN(result)) {
+      input.fail(`Failed to parse hex number: ${collected}`);
+    }
+    return ok(result);
   }
-  ch = input.character();
-  if (ch === "." || ch === "e" || ch === "E") {
-    input.rewind(numberStart);
-    return positiveFloatParser(input);
+  if ((state & GET_EXP) > 0 || (state & GET_DOT) > 0) {
+    const result = Number.parseFloat(collected);
+    if (Number.isNaN(result)) {
+      input.fail(`Failed to parse float number: ${collected}`);
+    }
+    return ok(result);
   }
 
-  return integerPart;
+  const result = Number.parseInt(collected, 10);
+  if (Number.isNaN(result)) {
+    input.fail(`Failed to parse int number: ${collected}`);
+  }
+  return ok(result);
 }
 export function number(input: IInput): ParserResult<number> {
   input.skipWhitespace();
