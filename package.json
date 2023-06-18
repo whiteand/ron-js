@@ -1,6 +1,6 @@
 {
   "name": "rusty-object-notation",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Rusty Object Notation for Javascript",
   "main": "dist/index.js",
   "scripts": {
