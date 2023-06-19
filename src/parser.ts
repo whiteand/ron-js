@@ -185,7 +185,7 @@ export function positiveNumber(input: IInput): ParserResult<number> {
     }
     return ok(res);
   }
-
+  if (!collected) return FALSE_RESULT;
   const res = Number.parseInt(collected, 10);
   if (Number.isNaN(res)) {
     input.fail("failed to decode decimal number literal");
@@ -241,6 +241,58 @@ interface IRonParserOptions {}
 
 const DEFAULT_RON_PARSER_OPTIONS: IRonParserOptions = {};
 
+function stringLiteral(input: IInput): ParserResult<string> {
+  let ch = input.character();
+  let numberOfHashes = 0;
+  if (ch === "r") {
+    input.skip(1);
+    while (!input.eof()) {
+      if (input.character() === "#") {
+        numberOfHashes += 1;
+        input.skip(1);
+        continue;
+      }
+      if (input.character() !== '"') {
+        return FALSE_RESULT;
+      }
+      input.skip(1);
+      break;
+    }
+  } else if (ch === '"') {
+    input.skip(1);
+  }
+  let result = "";
+  while (!input.eof()) {
+    let ch = input.character();
+    if (numberOfHashes === 0 && ch === "\\") {
+      input.skip(1);
+      ch = input.character();
+      if (ch === "n") {
+        result += "\n";
+        input.skip(1);
+      } else if (ch === "r") {
+        result += "\r";
+        input.skip(1);
+      } else if (ch === "t") {
+        result += "\t";
+        input.skip(1);
+      } else if (ch === "0") {
+        result += "\0";
+        input.skip(1);
+      } else if (ch === '"') {
+        result += '"';
+        input.skip(1);
+      } else if (ch === "\\") {
+        result += "\\";
+        input.skip(1);
+      } else {
+        input.fail("unknown escape sequence");
+      }
+    }
+  }
+  return FALSE_RESULT;
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
-) => or(number);
+) => or(number, stringLiteral);
