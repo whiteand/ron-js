@@ -223,4 +223,16 @@ describe("ron parser", () => {
       [typeSymbol]: "Coin",
     });
   });
+  it("should correctly parse map literal", () => {
+    let input = `{ "arbitrary": "keys", "are": "allowed" }`;
+    const stringInput = new StringInput(input);
+    const parsedValue = createRonParser()(stringInput);
+    expect(parsedValue.ok).toBe(true);
+    expect(parsedValue.value).toEqual(
+      new Map([
+        ["arbitrary", "keys"],
+        ["are", "allowed"],
+      ])
+    );
+  });
 });

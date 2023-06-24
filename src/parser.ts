@@ -548,6 +548,36 @@ function structLiteral(p: Parser<any>): Parser<TypedStructure> {
   };
 }
 
+function mapLiteral(p: Parser<any>): Parser<Map<any, any>> {
+  const parseKeyValue = function parseKeyValue(input: IInput) {
+    input.skipWhitespace();
+    const keyResult = p(input);
+    if (!keyResult.ok) {
+      return FALSE_RESULT;
+    }
+    input.skipWhitespace();
+    if (!consume(input, ":")) {
+      return FALSE_RESULT;
+    }
+    const valueResult = p(input);
+    if (!valueResult.ok) {
+      return FALSE_RESULT;
+    }
+    return ok([keyResult.value, valueResult.value]);
+  };
+
+  const keyValuesParser = commaSeparatedList(parseKeyValue, "{", "}");
+
+  return function mapParser(input: IInput) {
+    input.skipWhitespace();
+    const fields = keyValuesParser(input);
+    if (!fields.ok) {
+      return FALSE_RESULT;
+    }
+    return ok(new Map(fields.value));
+  };
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
 ) => {
@@ -559,7 +589,8 @@ export const createRonParser = (
     optionalLiteral(p),
     tuppleLiteral(p),
     lists(p),
-    structLiteral(p)
+    structLiteral(p),
+    mapLiteral(p)
   );
   function p(input: IInput) {
     return parseValue(input);
