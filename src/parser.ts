@@ -428,6 +428,37 @@ function optionalLiteral(p: Parser<any>): Parser<TOption<any>> {
   };
 }
 
+function tuppleLiteral(p: Parser<any>): Parser<any[]> {
+  return (input: IInput) => {
+    input.skipWhitespace();
+    if (consume(input, "()")) {
+      return ok([]);
+    }
+    if (!consume(input, "(")) {
+      return FALSE_RESULT;
+    }
+    const result_tupple: any[] = [];
+    while (true) {
+      const result = p(input);
+      if (!result.ok) {
+        return FALSE_RESULT;
+      }
+      result_tupple.push(result.value);
+      if (consume(input, ")")) {
+        break;
+      }
+      input.skipWhitespace();
+      if (input.character() === ",") {
+        input.skip(1);
+        input.skipWhitespace();
+      } else {
+        return FALSE_RESULT;
+      }
+    }
+    return ok(result_tupple);
+  };
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
 ) => {
@@ -436,7 +467,8 @@ export const createRonParser = (
     stringLiteral,
     booleanLiteral,
     charLiteral,
-    optionalLiteral(p)
+    optionalLiteral(p),
+    tuppleLiteral(p)
   );
   function p(input: IInput) {
     return parseValue(input);

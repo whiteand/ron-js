@@ -146,4 +146,28 @@ describe("ron parser", () => {
       }
     }
   });
+  it("should correctly parse tupples", () => {
+    const ronParser = createRonParser();
+    const inputs = [
+      [`("abc", 1.23, true)`, true, ["abc", 1.23, true], ""],
+      [`()`, true, [], ""],
+    ] as const;
+    for (const [input, isOk, value, rest] of inputs) {
+      const stringInput = new StringInput(input);
+
+      const parsedValue = ronParser(stringInput);
+
+      if (isOk) {
+        if (!parsedValue.ok) {
+          stringInput.fail("expected to be ok");
+        }
+        expect(parsedValue.ok).toBe(true);
+        expect((parsedValue as any).value).toEqual(value);
+        expect(stringInput.rest()).toBe(rest);
+      } else {
+        expect(parsedValue.ok).toBe(false);
+        expect(stringInput.rest()).toBe(rest);
+      }
+    }
+  });
 });
