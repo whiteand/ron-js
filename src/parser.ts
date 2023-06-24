@@ -414,7 +414,7 @@ function charLiteral(input: IInput): ParserResult<string> {
 type TOption<T> = { type: "some"; value: T } | { type: "none" };
 
 function optionalLiteral(p: Parser<any>): Parser<TOption<any>> {
-  return (input: IInput) => {
+  return function optionalLiteral(input: IInput) {
     input.skipWhitespace();
     if (consume(input, "None")) {
       return ok({ type: "none" });
@@ -475,10 +475,16 @@ function commaSeparatedList(
 }
 
 function tuppleLiteral(p: Parser<any>): Parser<any[]> {
-  return commaSeparatedList(p, "(", ")");
+  const res = commaSeparatedList(p, "(", ")");
+  return function tuppleLiteralParser(input: IInput) {
+    return res(input);
+  };
 }
 function lists(p: Parser<any>): Parser<any[]> {
-  return commaSeparatedList(p, "[", "]");
+  const res = commaSeparatedList(p, "[", "]");
+  return function listLiteral(input: IInput) {
+    return res(input);
+  };
 }
 
 interface TypedStructure extends Record<string, any> {
@@ -512,7 +518,7 @@ function identifier(input: IInput): ParserResult<string> {
 }
 
 function structLiteral(p: Parser<any>): Parser<TypedStructure> {
-  const parseKeyValue = function parseKeyValue(input: IInput) {
+  const parseKeyValue = function structureKeyValueParser(input: IInput) {
     input.skipWhitespace();
     const keyResult = identifier(input);
     if (!keyResult.ok) {
@@ -531,7 +537,7 @@ function structLiteral(p: Parser<any>): Parser<TypedStructure> {
 
   const fieldsParser = commaSeparatedList(parseKeyValue, "(", ")");
 
-  return function structureLiteralParser(input: IInput) {
+  return function structureLiteral(input: IInput) {
     input.skipWhitespace();
     const idResult = identifier(input);
     const structureType = idResult.ok ? idResult.value : null;

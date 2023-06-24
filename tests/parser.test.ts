@@ -235,4 +235,13 @@ describe("ron parser", () => {
       ])
     );
   });
+  it("correctly parses example value", () => {
+    const filePath = require("path").resolve(__dirname, "./examples/node.ron");
+    const input = require("fs").readFileSync(filePath).toString();
+    const stringInput = new StringInput(input);
+    const ronParser = createRonParser();
+    const parsedValue = ronParser(stringInput);
+
+    expect(parsedValue.ok).toBe(true);
+  });
 });
