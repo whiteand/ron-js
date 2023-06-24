@@ -333,6 +333,33 @@ function containsHashes(input: IInput, numberOfHashes: number) {
   return true;
 }
 
+function startsWith(input: IInput, text: string): boolean {
+  const checkpoint = input.checkpoint();
+  for (let i = 0; i < text.length; i++) {
+    if (input.character() !== text[i]) {
+      input.rewind(checkpoint);
+      return false;
+    }
+    input.skip(1);
+  }
+  input.rewind(checkpoint);
+  return true;
+}
+
+function booleanLiteral(input: IInput): ParserResult<true | false> {
+  input.skipWhitespace();
+
+  if (startsWith(input, "true")) {
+    input.skip(4);
+    return ok(true);
+  }
+  if (startsWith(input, "false")) {
+    input.skip(5);
+    return ok(false);
+  }
+  return FALSE_RESULT;
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
-) => or(number, stringLiteral);
+) => or(number, stringLiteral, booleanLiteral);
