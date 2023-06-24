@@ -97,4 +97,29 @@ describe("ron parser", () => {
       }
     }
   });
+
+  it("should correctly parse character literals", () => {
+    const ronParser = createRonParser();
+    const inputs = [
+      [`'e'`, true, "e", ""],
+      [`'\\n'`, true, "\n", ""],
+    ] as const;
+    for (const [input, isOk, value, rest] of inputs) {
+      const stringInput = new StringInput(input);
+
+      const parsedValue = ronParser(stringInput);
+
+      if (isOk) {
+        if (!parsedValue.ok) {
+          stringInput.fail("expected to be ok");
+        }
+        expect(parsedValue.ok).toBe(true);
+        expect((parsedValue as any).value).toBe(value);
+        expect(stringInput.rest()).toBe(rest);
+      } else {
+        expect(parsedValue.ok).toBe(false);
+        expect(stringInput.rest()).toBe(rest);
+      }
+    }
+  });
 });

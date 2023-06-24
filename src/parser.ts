@@ -360,6 +360,41 @@ function booleanLiteral(input: IInput): ParserResult<true | false> {
   return FALSE_RESULT;
 }
 
+function charLiteral(input: IInput): ParseResult<string> {
+  input.skipWhitespace();
+  if (input.character() !== "'") {
+    return FALSE_RESULT;
+  }
+  input.skip(1);
+  let ch = input.character();
+  if (ch === "\\") {
+    input.skip(1);
+    ch = input.character();
+    if (ch === "n") {
+      ch = "\n";
+    } else if (ch === "r") {
+      ch = "\r";
+    } else if (ch === "t") {
+      ch = "\t";
+    } else if (ch === "0") {
+      ch = "\0";
+    } else if (ch === '"') {
+      ch = '"';
+    } else if (ch === "'") {
+      ch = "'";
+    } else {
+      return FALSE_RESULT;
+    }
+  }
+  input.skip(1);
+  if (input.character() !== "'") {
+    return FALSE_RESULT;
+  }
+  input.skip(1);
+
+  return ok(ch);
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
-) => or(number, stringLiteral, booleanLiteral);
+) => or(number, stringLiteral, booleanLiteral, charLiteral);
