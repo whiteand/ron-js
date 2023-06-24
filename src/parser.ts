@@ -260,6 +260,8 @@ function stringLiteral(input: IInput): ParserResult<string> {
     }
   } else if (ch === '"') {
     input.skip(1);
+  } else {
+    return FALSE_RESULT;
   }
   let result = "";
   while (!input.eof()) {
@@ -335,14 +337,23 @@ function containsHashes(input: IInput, numberOfHashes: number) {
 
 function startsWith(input: IInput, text: string): boolean {
   const checkpoint = input.checkpoint();
-  for (let i = 0; i < text.length; i++) {
-    if (input.character() !== text[i]) {
+  const res = consume(input, text);
+  input.rewind(checkpoint);
+  return res;
+}
+
+function consume(input: IInput, text: string): boolean {
+  let checkpoint = input.checkpoint();
+  for (
+    let i = 0, ch = input.character();
+    i < text.length && !input.eof();
+    i++, input.skip(1), ch = input.character()
+  ) {
+    if (ch !== text[i]) {
       input.rewind(checkpoint);
       return false;
     }
-    input.skip(1);
   }
-  input.rewind(checkpoint);
   return true;
 }
 
@@ -360,7 +371,7 @@ function booleanLiteral(input: IInput): ParserResult<true | false> {
   return FALSE_RESULT;
 }
 
-function charLiteral(input: IInput): ParseResult<string> {
+function charLiteral(input: IInput): ParserResult<string> {
   input.skipWhitespace();
   if (input.character() !== "'") {
     return FALSE_RESULT;
@@ -395,6 +406,40 @@ function charLiteral(input: IInput): ParseResult<string> {
   return ok(ch);
 }
 
+type TOption<T> = { type: "some"; value: T } | { type: "none" };
+
+function optionalLiteral(p: Parser<any>): Parser<TOption<any>> {
+  return (input: IInput) => {
+    input.skipWhitespace();
+    if (consume(input, "None")) {
+      return ok({ type: "none" });
+    }
+    if (consume(input, "Some(")) {
+      const result = p(input);
+      if (!result.ok) {
+        return FALSE_RESULT;
+      }
+      if (!consume(input, ")")) {
+        return FALSE_RESULT;
+      }
+      return ok({ type: "some", value: result.value });
+    }
+    return FALSE_RESULT;
+  };
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
-) => or(number, stringLiteral, booleanLiteral, charLiteral);
+) => {
+  const parseValue = or(
+    number,
+    stringLiteral,
+    booleanLiteral,
+    charLiteral,
+    optionalLiteral(p)
+  );
+  function p(input: IInput) {
+    return parseValue(input);
+  }
+  return parseValue;
+};
