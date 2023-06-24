@@ -45,9 +45,9 @@ describe("ron parser", () => {
     const inputs = [
       // `"Hello"`, `"with\\escapes\n"`, `r#"raw string, great for regex\."#`
       [`"Hello"`, true, "Hello", ""],
-      [`"with\\\\escapes\\n"`, true, `with\\\\escapes\\n`, ""],
+      [`"with\\\\escapes\\n"`, true, `with\\escapes\n`, ""],
       [
-        `r#"raw string, great for regex\."#`,
+        `r#"raw string, great for regex\\."#`,
         true,
         "raw string, great for regex\\.",
         "",

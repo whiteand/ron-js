@@ -270,27 +270,67 @@ function stringLiteral(input: IInput): ParserResult<string> {
       if (ch === "n") {
         result += "\n";
         input.skip(1);
-      } else if (ch === "r") {
+        continue;
+      }
+      if (ch === "r") {
         result += "\r";
         input.skip(1);
-      } else if (ch === "t") {
+        continue;
+      }
+      if (ch === "t") {
         result += "\t";
         input.skip(1);
-      } else if (ch === "0") {
+        continue;
+      }
+      if (ch === "0") {
         result += "\0";
         input.skip(1);
-      } else if (ch === '"') {
+        continue;
+      }
+      if (ch === '"') {
         result += '"';
         input.skip(1);
-      } else if (ch === "\\") {
+        continue;
+      }
+      if (ch === "\\") {
         result += "\\";
         input.skip(1);
-      } else {
-        input.fail("unknown escape sequence");
+        continue;
       }
+      input.fail("unknown escape sequence");
+    }
+    if (ch === '"' && numberOfHashes === 0) {
+      input.skip(1);
+      return ok(result);
+    }
+    if (ch !== '"') {
+      result += ch;
+      input.skip(1);
+      continue;
+    }
+    input.skip(1);
+    let checkpoint = input.checkpoint();
+    if (containsHashes(input, numberOfHashes)) {
+      input.rewind(checkpoint);
+      input.skip(numberOfHashes);
+      return ok(result);
+    } else {
+      input.rewind(checkpoint);
+      result += ch;
+      input.skip(1);
     }
   }
   return FALSE_RESULT;
+}
+
+function containsHashes(input: IInput, numberOfHashes: number) {
+  for (let i = 0; i < numberOfHashes; i++) {
+    if (input.character() !== "#") {
+      return false;
+    }
+    input.skip(1);
+  }
+  return true;
 }
 
 export const createRonParser = (
