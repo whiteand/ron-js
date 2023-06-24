@@ -209,4 +209,18 @@ describe("ron parser", () => {
       [typeSymbol]: null,
     });
   });
+  it("should correctly parse typed structures", () => {
+    let input = `Coin( foo: 1.0, bar: ( baz: "I'm nested" ) )`;
+    const stringInput = new StringInput(input);
+    const parsedValue = createRonParser()(stringInput);
+    expect(parsedValue.ok).toBe(true);
+    expect(parsedValue.value).toEqual({
+      foo: 1.0,
+      bar: {
+        baz: "I'm nested",
+        [typeSymbol]: null,
+      },
+      [typeSymbol]: "Coin",
+    });
+  });
 });
