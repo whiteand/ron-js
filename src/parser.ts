@@ -1,4 +1,5 @@
 import { IInput } from "./IInput";
+import { typeSymbol } from "./typeSymbol";
 
 const FALSE_RESULT = { ok: false } as const;
 class OkResult<T> {
@@ -242,6 +243,7 @@ interface IRonParserOptions {}
 const DEFAULT_RON_PARSER_OPTIONS: IRonParserOptions = {};
 
 function stringLiteral(input: IInput): ParserResult<string> {
+  input.skipWhitespace();
   let ch = input.character();
   let numberOfHashes = 0;
   if (ch === "r") {
@@ -344,17 +346,20 @@ function startsWith(input: IInput, text: string): boolean {
 
 function consume(input: IInput, text: string): boolean {
   let checkpoint = input.checkpoint();
-  for (
-    let i = 0, ch = input.character();
-    i < text.length && !input.eof();
-    i++, input.skip(1), ch = input.character()
-  ) {
+  let i = 0;
+  while (!input.eof()) {
+    const ch = input.character();
     if (ch !== text[i]) {
-      input.rewind(checkpoint);
-      return false;
+      break;
     }
+    input.skip(1);
+    i++;
   }
-  return true;
+  if (i === text.length) {
+    return true;
+  }
+  input.rewind(checkpoint);
+  return false;
 }
 
 function booleanLiteral(input: IInput): ParserResult<true | false> {
@@ -433,7 +438,7 @@ function commaSeparatedList(
   start: string,
   end: string
 ): Parser<any[]> {
-  return (input: IInput) => {
+  return function commaSeparatedListParser(input: IInput) {
     input.skipWhitespace();
     if (!consume(input, start)) {
       return FALSE_RESULT;
@@ -449,13 +454,13 @@ function commaSeparatedList(
         return FALSE_RESULT;
       }
       result_tupple.push(result.value);
+      input.skipWhitespace();
       if (consume(input, end)) {
         break;
       }
       input.skipWhitespace();
       if (input.character() === ",") {
         input.skip(1);
-        input.skipWhitespace();
       } else {
         return FALSE_RESULT;
       }
@@ -476,6 +481,73 @@ function lists(p: Parser<any>): Parser<any[]> {
   return commaSeparatedList(p, "[", "]");
 }
 
+interface TypedStructure extends Record<string, any> {
+  [typeSymbol]: string;
+}
+
+function isAlpha(ch: string): boolean {
+  return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z");
+}
+
+function isDigit(ch: string): boolean {
+  return ch >= "0" && ch <= "9";
+}
+
+function identifier(input: IInput): ParserResult<string> {
+  input.skipWhitespace();
+  let result = "";
+  while (!input.eof()) {
+    const ch = input.character();
+    if (ch === "_" || isAlpha(ch) || isDigit(ch)) {
+      result += ch;
+      input.skip(1);
+      continue;
+    }
+    break;
+  }
+  if (result === "") {
+    return FALSE_RESULT;
+  }
+  return ok(result);
+}
+
+function structLiteral(p: Parser<any>): Parser<TypedStructure> {
+  const parseKeyValue = function parseKeyValue(input: IInput) {
+    input.skipWhitespace();
+    const keyResult = identifier(input);
+    if (!keyResult.ok) {
+      return FALSE_RESULT;
+    }
+    input.skipWhitespace();
+    if (!consume(input, ":")) {
+      return FALSE_RESULT;
+    }
+    const valueResult = p(input);
+    if (!valueResult.ok) {
+      return FALSE_RESULT;
+    }
+    return ok([keyResult.value, valueResult.value]);
+  };
+
+  const fieldsParser = commaSeparatedList(parseKeyValue, "(", ")");
+
+  return function structureLiteralParser(input: IInput) {
+    input.skipWhitespace();
+    const idResult = identifier(input);
+    const structureType = idResult.ok ? idResult.value : null;
+    const fields = fieldsParser(input);
+    if (!fields.ok) {
+      return FALSE_RESULT;
+    }
+    let result = Object.create(null);
+    for (const [key, value] of fields.value) {
+      result[key] = value;
+    }
+    result[typeSymbol] = structureType;
+    return ok(result);
+  };
+}
+
 export const createRonParser = (
   options: IRonParserOptions = DEFAULT_RON_PARSER_OPTIONS
 ) => {
@@ -486,7 +558,8 @@ export const createRonParser = (
     charLiteral,
     optionalLiteral(p),
     tuppleLiteral(p),
-    lists(p)
+    lists(p),
+    structLiteral(p)
   );
   function p(input: IInput) {
     return parseValue(input);
