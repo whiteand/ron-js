@@ -428,14 +428,19 @@ function optionalLiteral(p: Parser<any>): Parser<TOption<any>> {
   };
 }
 
-function tuppleLiteral(p: Parser<any>): Parser<any[]> {
+function commaSeparatedList(
+  p: Parser<any>,
+  start: string,
+  end: string
+): Parser<any[]> {
   return (input: IInput) => {
     input.skipWhitespace();
-    if (consume(input, "()")) {
-      return ok([]);
-    }
-    if (!consume(input, "(")) {
+    if (!consume(input, start)) {
       return FALSE_RESULT;
+    }
+    input.skipWhitespace();
+    if (consume(input, end)) {
+      return ok([]);
     }
     const result_tupple: any[] = [];
     while (true) {
@@ -444,7 +449,7 @@ function tuppleLiteral(p: Parser<any>): Parser<any[]> {
         return FALSE_RESULT;
       }
       result_tupple.push(result.value);
-      if (consume(input, ")")) {
+      if (consume(input, end)) {
         break;
       }
       input.skipWhitespace();
@@ -455,8 +460,20 @@ function tuppleLiteral(p: Parser<any>): Parser<any[]> {
         return FALSE_RESULT;
       }
     }
+
+    if (result_tupple.length <= 0) {
+      return FALSE_RESULT;
+    }
+
     return ok(result_tupple);
   };
+}
+
+function tuppleLiteral(p: Parser<any>): Parser<any[]> {
+  return commaSeparatedList(p, "(", ")");
+}
+function lists(p: Parser<any>): Parser<any[]> {
+  return commaSeparatedList(p, "[", "]");
 }
 
 export const createRonParser = (
@@ -468,7 +485,8 @@ export const createRonParser = (
     booleanLiteral,
     charLiteral,
     optionalLiteral(p),
-    tuppleLiteral(p)
+    tuppleLiteral(p),
+    lists(p)
   );
   function p(input: IInput) {
     return parseValue(input);
