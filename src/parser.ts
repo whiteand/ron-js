@@ -238,7 +238,7 @@ export function or<Parsers extends Parser<any>[]>(
   };
 }
 
-interface IRonParserOptions {}
+export interface IRonParserOptions {}
 
 const DEFAULT_RON_PARSER_OPTIONS: IRonParserOptions = {};
 
@@ -414,8 +414,8 @@ function charLiteral(input: IInput): ParserResult<string> {
 type TOption<T> = { type: "some"; value: T } | { type: "none" };
 
 function optionalLiteral(p: Parser<any>): Parser<TOption<any>> {
-  return function optionalLiteral(input: IInput) {
-    input.skipWhitespace();
+  return function optionalLiteral(input: IInput): ParserResult<TOption<any>> {
+    skipCommentsAndWhitespace(input);
     if (consume(input, "None")) {
       return ok({ type: "none" });
     }
@@ -439,11 +439,11 @@ function commaSeparatedList(
   end: string
 ): Parser<any[]> {
   return function commaSeparatedListParser(input: IInput) {
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     if (!consume(input, start)) {
       return FALSE_RESULT;
     }
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     if (consume(input, end)) {
       return ok([]);
     }
@@ -454,15 +454,13 @@ function commaSeparatedList(
         return FALSE_RESULT;
       }
       result_tupple.push(result.value);
-      input.skipWhitespace();
-      if (consume(input, end)) {
-        break;
-      }
-      input.skipWhitespace();
+      skipCommentsAndWhitespace(input);
       if (input.character() === ",") {
         input.skip(1);
-      } else {
-        return FALSE_RESULT;
+      }
+      skipCommentsAndWhitespace(input);
+      if (consume(input, end)) {
+        break;
       }
     }
 
@@ -500,7 +498,6 @@ function isDigit(ch: string): boolean {
 }
 
 function identifier(input: IInput): ParserResult<string> {
-  input.skipWhitespace();
   let result = "";
   while (!input.eof()) {
     const ch = input.character();
@@ -519,12 +516,12 @@ function identifier(input: IInput): ParserResult<string> {
 
 function structLiteral(p: Parser<any>): Parser<TypedStructure> {
   const parseKeyValue = function structureKeyValueParser(input: IInput) {
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     const keyResult = identifier(input);
     if (!keyResult.ok) {
       return FALSE_RESULT;
     }
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     if (!consume(input, ":")) {
       return FALSE_RESULT;
     }
@@ -538,15 +535,23 @@ function structLiteral(p: Parser<any>): Parser<TypedStructure> {
   const fieldsParser = commaSeparatedList(parseKeyValue, "(", ")");
 
   return function structureLiteral(input: IInput) {
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     const idResult = identifier(input);
     const structureType = idResult.ok ? idResult.value : null;
-    const fields = fieldsParser(input);
-    if (!fields.ok) {
+    skipCommentsAndWhitespace(input);
+
+    let fields: [string, any][] = [];
+    if (input.character() === "(") {
+      const fieldsResult = fieldsParser(input);
+      if (!fieldsResult.ok) {
+        return FALSE_RESULT;
+      }
+      fields = fieldsResult.value;
+    } else if (structureType == null) {
       return FALSE_RESULT;
     }
     let result = Object.create(null);
-    for (const [key, value] of fields.value) {
+    for (const [key, value] of fields) {
       result[key] = value;
     }
     result[typeSymbol] = structureType;
@@ -556,12 +561,12 @@ function structLiteral(p: Parser<any>): Parser<TypedStructure> {
 
 function mapLiteral(p: Parser<any>): Parser<Map<any, any>> {
   const parseKeyValue = function parseKeyValue(input: IInput) {
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     const keyResult = p(input);
     if (!keyResult.ok) {
       return FALSE_RESULT;
     }
-    input.skipWhitespace();
+    skipCommentsAndWhitespace(input);
     if (!consume(input, ":")) {
       return FALSE_RESULT;
     }
@@ -575,13 +580,31 @@ function mapLiteral(p: Parser<any>): Parser<Map<any, any>> {
   const keyValuesParser = commaSeparatedList(parseKeyValue, "{", "}");
 
   return function mapParser(input: IInput) {
-    input.skipWhitespace();
     const fields = keyValuesParser(input);
     if (!fields.ok) {
       return FALSE_RESULT;
     }
     return ok(new Map(fields.value));
   };
+}
+
+function skipCommentsAndWhitespace(input: IInput) {
+  input.skipWhitespace();
+  if (input.character() !== "/") return false;
+  let checkpoint = input.checkpoint();
+  input.skip(1);
+  if (input.character() !== "/") {
+    input.rewind(checkpoint);
+    return false;
+  }
+  while (!input.eof()) {
+    if (input.character() === "\n") {
+      input.skip(1);
+      break;
+    }
+    input.skip(1);
+  }
+  return true;
 }
 
 export const createRonParser = (
@@ -598,8 +621,10 @@ export const createRonParser = (
     structLiteral(p),
     mapLiteral(p)
   );
+
   function p(input: IInput) {
+    skipCommentsAndWhitespace(input);
     return parseValue(input);
   }
-  return parseValue;
+  return p;
 };

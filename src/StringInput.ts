@@ -16,7 +16,7 @@ export class StringInput implements IInput {
   }
   eof(): boolean {
     cnt += 1;
-    if (cnt > 1e4) {
+    if (cnt > 1e5) {
       this.fail(`infinite loop`);
     }
     return this.pos >= this.text.length;
@@ -51,8 +51,8 @@ export class StringInput implements IInput {
       }
     }
   }
-  position(): void {
-    throw new Error("Method not implemented.");
+  position(): number {
+    return this.pos;
   }
   character(): string {
     return this.text[this.pos];

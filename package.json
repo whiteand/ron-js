@@ -3,11 +3,14 @@
   "version": "0.0.2",
   "description": "Rusty Object Notation for Javascript",
   "main": "dist/index.js",
+  "module": "dist/index.esm.js",
   "scripts": {
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "build": "node scripts/build.mjs"
+    "build-type-declarations": "npx tsc --emitDeclarationOnly --declaration ./src/index.ts --outDir ./dist/declarations",
+    "build": "node scripts/build.mjs && npm run build-type-declarations"
   },
+  "types": "dist/declarations/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/whiteand/rusty-object-notation.git"

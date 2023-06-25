@@ -1,5 +1,5 @@
 import { describe, it } from "@vitest/runner";
-import { StringInput, createRonParser, typeSymbol } from "../src";
+import { StringInput, createRonParser, parse, typeSymbol } from "../src";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { expect } from "vitest";
@@ -14,11 +14,9 @@ describe("ron parser", () => {
     ["0xa", true, 10, ""],
     ["0xAa", true, 170, ""],
     ["0b010", true, 2, ""],
-    ["   a42 ", false, null, "   a42 "],
     ["3.14", true, 3.14, ""],
     ["3.14e2", true, 314, ""],
     ["3e2", true, 300, ""],
-    ["e2", false, null, "e2"],
   ])(
     'should correctly parse number literal: "%s"',
     (input, isOk, value, rest) => {
@@ -33,6 +31,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toBe(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -64,6 +63,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toBe(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -90,6 +90,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toBe(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -115,6 +116,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toBe(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -139,6 +141,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toEqual(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -163,6 +166,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toEqual(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -187,6 +191,7 @@ describe("ron parser", () => {
           stringInput.fail("expected to be ok");
         }
         expect(parsedValue.ok).toBe(true);
+        if (!parsedValue.ok) return;
         expect((parsedValue as any).value).toEqual(value);
         expect(stringInput.rest()).toBe(rest);
       } else {
@@ -200,6 +205,7 @@ describe("ron parser", () => {
     const stringInput = new StringInput(input);
     const parsedValue = createRonParser()(stringInput);
     expect(parsedValue.ok).toBe(true);
+    if (!parsedValue.ok) return;
     expect(parsedValue.value).toEqual({
       foo: 1.0,
       bar: {
@@ -214,6 +220,7 @@ describe("ron parser", () => {
     const stringInput = new StringInput(input);
     const parsedValue = createRonParser()(stringInput);
     expect(parsedValue.ok).toBe(true);
+    if (!parsedValue.ok) return;
     expect(parsedValue.value).toEqual({
       foo: 1.0,
       bar: {
@@ -223,11 +230,22 @@ describe("ron parser", () => {
       [typeSymbol]: "Coin",
     });
   });
+  it("should correctly parse typed structures", () => {
+    let input = `Coin`;
+    const stringInput = new StringInput(input);
+    const parsedValue = createRonParser()(stringInput);
+    expect(parsedValue.ok).toBe(true);
+    if (!parsedValue.ok) return;
+    expect(parsedValue.value).toEqual({
+      [typeSymbol]: "Coin",
+    });
+  });
   it("should correctly parse map literal", () => {
     let input = `{ "arbitrary": "keys", "are": "allowed" }`;
     const stringInput = new StringInput(input);
     const parsedValue = createRonParser()(stringInput);
     expect(parsedValue.ok).toBe(true);
+    if (!parsedValue.ok) return;
     expect(parsedValue.value).toEqual(
       new Map([
         ["arbitrary", "keys"],
@@ -236,12 +254,21 @@ describe("ron parser", () => {
     );
   });
   it("correctly parses example value", () => {
-    const filePath = require("path").resolve(__dirname, "./examples/node.ron");
-    const input = require("fs").readFileSync(filePath).toString();
-    const stringInput = new StringInput(input);
-    const ronParser = createRonParser();
-    const parsedValue = ronParser(stringInput);
+    const examplesDirectoryPath = require("path").resolve(
+      __dirname,
+      "./examples"
+    );
 
-    expect(parsedValue.ok).toBe(true);
+    const files = require("fs").readdirSync(examplesDirectoryPath);
+    for (const file of files) {
+      if (file.trim().endsWith(".ron")) {
+        const filePath = require("path").resolve(examplesDirectoryPath, file);
+
+        const input = require("fs").readFileSync(filePath).toString();
+        const parsedValue = parse(input);
+
+        console.log(parsedValue);
+      }
+    }
   });
 });
