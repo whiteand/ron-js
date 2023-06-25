@@ -13,3 +13,13 @@ Tuples: `("abc", 1.23, true)`, `()`
 Lists: `["abc", "def"]`
 Structs: `( foo: 1.0, bar: ( baz: "I'm nested" ) )`
 Maps: `{ "arbitrary": "keys", "are": "allowed" }`
+
+# Usage
+
+```typescript
+import { parse } from 'rusty-object-notation'
+
+const ron = '( foo: 1.0, bar: ( baz: "I\'m nested" ) )'
+const obj = parse(ron)
+console.log(obj) // { foo: 1.0, bar: { baz: "I'm nested" } }
+```
