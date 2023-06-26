@@ -1,6 +1,6 @@
 {
   "name": "rusty-object-notation",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Rusty Object Notation for Javascript",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
