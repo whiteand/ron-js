@@ -253,6 +253,13 @@ describe("ron parser", () => {
       ])
     );
   });
+  it("parses unit structures as the same value", () => {
+    const x = parse<{ [typeSymbol]: string }>("hello");
+    const y = parse<{ [typeSymbol]: string }>("hello");
+
+    expect(x).toBe(y);
+    expect(x[typeSymbol]).toBe("hello");
+  });
   it("correctly parses example value", () => {
     const examplesDirectoryPath = require("path").resolve(
       __dirname,
@@ -265,9 +272,7 @@ describe("ron parser", () => {
         const filePath = require("path").resolve(examplesDirectoryPath, file);
 
         const input = require("fs").readFileSync(filePath).toString();
-        const parsedValue = parse(input);
-
-        console.log(parsedValue);
+        parse(input);
       }
     }
   });

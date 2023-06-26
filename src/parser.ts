@@ -497,6 +497,8 @@ function isDigit(ch: string): boolean {
   return ch >= "0" && ch <= "9";
 }
 
+const unitStructures = new Map<string, {}>();
+
 function identifier(input: IInput): ParserResult<string> {
   let result = "";
   while (!input.eof()) {
@@ -550,6 +552,16 @@ function structLiteral(p: Parser<any>): Parser<TypedStructure> {
     } else if (structureType == null) {
       return FALSE_RESULT;
     }
+    if (fields.length === 0 && structureType != null) {
+      const unitStructure = unitStructures.get(structureType);
+      if (unitStructure == null) {
+        const structureValue = { [typeSymbol]: structureType };
+        unitStructures.set(structureType, structureValue);
+        return ok(structureValue);
+      }
+      return ok(unitStructure);
+    }
+
     let result = Object.create(null);
     for (const [key, value] of fields) {
       result[key] = value;
